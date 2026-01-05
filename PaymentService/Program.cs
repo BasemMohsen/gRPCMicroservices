@@ -18,8 +18,15 @@ builder.Services.AddDbContext<PaymentDbContext>(options =>
 builder.Services.AddScoped<PaymentProcessor>();
 var app = builder.Build();
 
-var processor = app.Services.GetRequiredService<PaymentProcessor>();
-await processor.ProcessPaymentAsync();
+using (var scope = app.Services.CreateScope())
+{
+    var processor = scope.ServiceProvider
+        .GetRequiredService<PaymentProcessor>();
+
+    await processor.ProcessPaymentAsync();
+}
+//var processor = app.Services.GetRequiredService<PaymentProcessor>();
+//await processor.ProcessPaymentAsync();
 
 // Configure the HTTP request pipeline.
 //app.MapGrpcService<GreeterService>();

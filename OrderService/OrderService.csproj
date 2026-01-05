@@ -9,9 +9,9 @@
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.64.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Services\" />
-  </ItemGroup>
+	
+	<ItemGroup>
+		<Protobuf Include="Protos\order.proto" GrpcServices="Server" />
+	</ItemGroup>
 
 </Project>

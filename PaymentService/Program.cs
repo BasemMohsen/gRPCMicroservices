@@ -1,6 +1,6 @@
 //using PaymentService.Services;
-
-using PaymentService.Services;
+using Microsoft.EntityFrameworkCore;
+using PaymentService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +11,11 @@ builder.Services.AddGrpcClient<OrderService.Contracts.OrderService.OrderServiceC
     o.Address = new Uri("http://localhost:5077"); // Address of the OrderService
 });
 
-builder.Services.AddSingleton<PaymentProcessor>();
+builder.Services.AddDbContext<PaymentDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("PaymentDb")));
+
+
+builder.Services.AddScoped<PaymentProcessor>();
 var app = builder.Build();
 
 var processor = app.Services.GetRequiredService<PaymentProcessor>();

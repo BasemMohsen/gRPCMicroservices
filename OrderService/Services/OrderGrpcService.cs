@@ -1,48 +1,69 @@
-﻿using Grpc.Core;
+﻿using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
 using OrderService.Contracts;
+using OrderService.Domain;
+using OrderService.Infrastructure;
+using static OrderService.Contracts.OrderService;
 
-namespace OrderService.Services;
-
-public class OrderGrpcService : OrderService.Contracts.OrderService.OrderServiceBase
+public class OrderGrpcService : OrderServiceBase
 {
-    private static readonly Dictionary<string, (string Status, double Amount)> Orders = new();
+    private readonly OrderDbContext _db;
 
-    public override Task<CreateOrderResponse> CreateOrder(
+    public OrderGrpcService(OrderDbContext db)
+    {
+        _db = db;
+    }
+
+    public override async Task<CreateOrderResponse> CreateOrder(
         CreateOrderRequest request,
         ServerCallContext context)
     {
-        if (request.Amount <= 0)
+        var order = new Order
         {
-            throw new RpcException(
-                new Status(StatusCode.InvalidArgument, "Amount must be greater than zero"));
-        }
+            Id = Guid.NewGuid(),
+            CustomerId = request.CustomerId,
+            Amount = request.Amount,
+            Status = "PendingPayment",
+            CreatedAt = DateTime.UtcNow
+        };
 
-        var orderId = Guid.NewGuid().ToString();
+        _db.Orders.Add(order);
+        await _db.SaveChangesAsync();
 
-        Orders[orderId] = ("Created", request.Amount);
-
-        return Task.FromResult(new CreateOrderResponse
+        return new CreateOrderResponse
         {
-            OrderId = orderId,
-            Status = "Created"
-        });
+            OrderId = order.Id.ToString(),
+            Status = order.Status
+        };
     }
 
-    public override Task<GetOrderResponse> GetOrder(
-        GetOrderRequest request,
+    public override async Task<Empty> MarkOrderAsPaid(
+        MarkOrderAsPaidRequest request,
         ServerCallContext context)
     {
-        if (!Orders.TryGetValue(request.OrderId, out var order))
+        if (!Guid.TryParse(request.OrderId, out var orderId))
+        {
+            throw new RpcException(
+                new Status(StatusCode.InvalidArgument, "Invalid OrderId"));
+        }
+
+        var order = await _db.Orders.FindAsync(orderId);
+
+        if (order == null)
         {
             throw new RpcException(
                 new Status(StatusCode.NotFound, "Order not found"));
         }
 
-        return Task.FromResult(new GetOrderResponse
+        if (order.Status == "Paid")
         {
-            OrderId = request.OrderId,
-            Status = order.Status,
-            Amount = order.Amount
-        });
+            // idempotency-friendly behavior
+            return new Empty();
+        }
+
+        order.Status = "Paid";
+        await _db.SaveChangesAsync();
+
+        return new Empty();
     }
 }

@@ -4,9 +4,14 @@ option csharp_namespace = "OrderService.Contracts";
 
 package order.v1;
 
+import "google/protobuf/empty.proto";
+
 service OrderService {
   rpc CreateOrder (CreateOrderRequest) returns (CreateOrderResponse);
   rpc GetOrder (GetOrderRequest) returns (GetOrderResponse);
+
+  // NEW: command from PaymentService
+  rpc MarkOrderAsPaid (MarkOrderAsPaidRequest) returns (google.protobuf.Empty);
 }
 
 message CreateOrderRequest {
@@ -27,4 +32,9 @@ message GetOrderResponse {
   string orderId = 1;
   string status = 2;
   double amount = 3;
+}
+
+// NEW message
+message MarkOrderAsPaidRequest {
+  string orderId = 1;
 }

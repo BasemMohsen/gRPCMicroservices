@@ -1,25 +1,49 @@
 ﻿using OrderService.Contracts;
-
-namespace PaymentService.Services;
+using PaymentService.Domain;
+using PaymentService.Infrastructure;
+using static OrderService.Contracts.OrderService;
 
 public class PaymentProcessor
 {
-    private readonly OrderService.Contracts.OrderService.OrderServiceClient _orderClient;
+    private readonly OrderServiceClient _orderClient;
+    private readonly PaymentDbContext _db;
 
-    public PaymentProcessor(OrderService.Contracts.OrderService.OrderServiceClient orderClient)
+    public PaymentProcessor(
+        OrderServiceClient orderClient,
+        PaymentDbContext db)
     {
         _orderClient = orderClient;
+        _db = db;
     }
 
     public async Task ProcessPaymentAsync()
     {
-        var response = await _orderClient.CreateOrderAsync(
+        // 1. Create order
+        var orderResponse = await _orderClient.CreateOrderAsync(
             new CreateOrderRequest
             {
-                CustomerId = "customer-123",
-                Amount = 150
+                CustomerId = "cust-1",
+                Amount = 200
             });
 
-        Console.WriteLine($"Order created: {response.OrderId}");
+        // 2. Save payment
+        var payment = new Payment
+        {
+            Id = Guid.NewGuid(),
+            OrderId = Guid.Parse(orderResponse.OrderId),
+            Amount = 200,
+            Status = "Completed",
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _db.Payments.Add(payment);
+        await _db.SaveChangesAsync();
+
+        // 3. Mark order as paid
+        await _orderClient.MarkOrderAsPaidAsync(
+            new MarkOrderAsPaidRequest
+            {
+                OrderId = orderResponse.OrderId
+            });
     }
 }

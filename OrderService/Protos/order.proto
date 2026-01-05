@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option csharp_namespace = "OrderService.Contracts";
+
+package order.v1;
+
+service OrderService {
+  rpc CreateOrder (CreateOrderRequest) returns (CreateOrderResponse);
+  rpc GetOrder (GetOrderRequest) returns (GetOrderResponse);
+}
+
+message CreateOrderRequest {
+  string customerId = 1;
+  double amount = 2;
+}
+
+message CreateOrderResponse {
+  string orderId = 1;
+  string status = 2;
+}
+
+message GetOrderRequest {
+  string orderId = 1;
+}
+
+message GetOrderResponse {
+  string orderId = 1;
+  string status = 2;
+  double amount = 3;
+}
